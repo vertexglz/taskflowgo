@@ -38,8 +38,6 @@ func TestTaskStart(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := Task{
-				ID:     1,
-				Title:  "Test",
 				status: tt.initialStatus,
 			}
 			err := task.Start()
@@ -93,8 +91,6 @@ func TestTaskComplete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := Task{
-				ID:     1,
-				Title:  "test",
 				status: tt.initialStatus,
 			}
 
@@ -145,8 +141,6 @@ func TestTaskCancel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := Task{
-				ID:     1,
-				Title:  "test",
 				status: tt.initialStatus,
 			}
 
@@ -163,6 +157,115 @@ func TestTaskCancel(t *testing.T) {
 			if got := task.Status(); got != tt.wantStatus {
 				t.Errorf("expected status: %v, got : %v", tt.wantStatus, got)
 			}
+		})
+	}
+
+}
+
+func TestNewTask(t *testing.T) {
+	tests := []struct {
+		name         string
+		title        string
+		priority     TaskPriority
+		wantTitle    string
+		wantPriority TaskPriority
+		wantErr      error
+	}{
+		{
+			name:         "Valid low",
+			title:        "Learn Go",
+			priority:     PriorityLow,
+			wantTitle:    "Learn Go",
+			wantPriority: PriorityLow,
+		},
+		{
+			name:         "Valid Medium",
+			title:        "Learn Go",
+			priority:     PriorityMedium,
+			wantTitle:    "Learn Go",
+			wantPriority: PriorityMedium,
+		}, {
+			name:         "Valid High",
+			title:        "Learn Go",
+			priority:     PriorityHigh,
+			wantTitle:    "Learn Go",
+			wantPriority: PriorityHigh,
+		}, {
+			name:         "Default Priority",
+			title:        "Learn Go",
+			priority:     "",
+			wantTitle:    "Learn Go",
+			wantPriority: PriorityMedium,
+		},
+		{
+			name:     "Empty Title",
+			title:    "",
+			priority: PriorityLow,
+			wantErr:  ErrEmptyTaskTitle,
+		},
+		{
+			name:     "WhiteSpace Title",
+			title:    "      ",
+			priority: PriorityLow,
+			wantErr:  ErrEmptyTaskTitle,
+		},
+		{
+			name:     "Invalid Priority",
+			title:    "Learn Go",
+			priority: "banana",
+			wantErr:  ErrInvalidTaskPriority,
+		},
+		{
+			name:         "trim title",
+			title:        "  Learn Go  ",
+			priority:     PriorityLow,
+			wantTitle:    "Learn Go",
+			wantPriority: PriorityLow,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task, err := NewTask(tt.title, "", tt.priority)
+
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected err: %v, got: %v", tt.wantErr, err)
+				}
+				if task != nil {
+					t.Fatalf("expected nil task, got:%v", task)
+				}
+				return
+
+			} else if err != nil {
+				t.Fatalf("unexpecter error: %v", err)
+			}
+			if task == nil {
+				t.Fatalf("expected task, got nil")
+			}
+
+			if task.title != tt.wantTitle {
+				t.Errorf("expected title: %v, got: %v", tt.wantTitle, task.title)
+			}
+			if task.priority != tt.wantPriority {
+				t.Errorf("expected priority: %v, got: %v", tt.wantPriority, task.priority)
+			}
+			if task.Status() != StatusTodo {
+				t.Errorf("expected Status ToDo, got:%v", task.Status())
+			}
+			if task.createdAt.IsZero() {
+				t.Errorf("expected time,got nil")
+			}
+			if task.updatedAt.IsZero() {
+				t.Errorf("expected time, got nil")
+			}
+			if task.createdAt != task.updatedAt {
+				t.Errorf("expected one time, got: %v , %v", task.createdAt, task.updatedAt)
+			}
+			if task.id != 0 {
+				t.Errorf("expected id = 0, got : id = %v", task.id)
+			}
+
 		})
 	}
 

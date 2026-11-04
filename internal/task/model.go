@@ -3,13 +3,18 @@ package task
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
 type TaskStatus string
 type TaskPriority string
 
-var ErrInvalidStatusTransition = errors.New("invalid status transition")
+var (
+	ErrInvalidStatusTransition = errors.New("invalid status transition")
+	ErrEmptyTaskTitle          = errors.New("title cannot be empty")
+	ErrInvalidTaskPriority     = errors.New("invalid task priority")
+)
 
 const (
 	StatusTodo       TaskStatus = "todo"
@@ -24,13 +29,13 @@ const (
 )
 
 type Task struct {
-	ID          int64
-	Title       string
-	Description string
+	id          int64
+	title       string
+	description string
 	status      TaskStatus
-	Priority    TaskPriority
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	priority    TaskPriority
+	createdAt   time.Time
+	updatedAt   time.Time
 }
 
 type CreateTaskRequest struct {
@@ -66,4 +71,25 @@ func (t *Task) Cancel() error {
 		return nil
 	}
 	return fmt.Errorf("cannot cancel task from status %q : %w", t.status, ErrInvalidStatusTransition)
+}
+
+func NewTask(title, description string, priority TaskPriority) (*Task, error) {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return nil, ErrEmptyTaskTitle
+	}
+	if priority == "" {
+		priority = PriorityMedium
+	} else if priority != PriorityLow && priority != PriorityMedium && priority != PriorityHigh {
+		return nil, ErrInvalidTaskPriority
+	}
+	now := time.Now()
+	task := &Task{
+		title:       title,
+		description: description,
+		status:      StatusTodo,
+		priority:    priority,
+		createdAt:   now,
+		updatedAt:   now}
+	return task, nil
 }
