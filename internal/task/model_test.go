@@ -2,7 +2,9 @@ package task
 
 import (
 	"errors"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestTaskStart(t *testing.T) {
@@ -269,4 +271,145 @@ func TestNewTask(t *testing.T) {
 		})
 	}
 
+}
+
+func TestTaskDescription(t *testing.T) {
+	tests := []struct {
+		name            string
+		description     string
+		wantDescription string
+	}{
+		{
+			name:            "test description",
+			description:     "test",
+			wantDescription: "test",
+		}, {
+			name:            "empty description test",
+			description:     "",
+			wantDescription: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := Task{
+				description: tt.description,
+			}
+
+			if task.Description() != tt.wantDescription {
+				t.Errorf("expected description:%v, got:%v", tt.wantDescription, task.Description())
+			}
+		})
+	}
+}
+
+func TestTaskPriority(t *testing.T) {
+	tests := []struct {
+		name         string
+		priority     TaskPriority
+		wantPriority TaskPriority
+	}{
+		{
+			name:         "test low priority",
+			priority:     PriorityLow,
+			wantPriority: PriorityLow,
+		}, {
+			name:         "test medium priority",
+			priority:     PriorityMedium,
+			wantPriority: PriorityMedium,
+		}, {
+			name:         "test high priority",
+			priority:     PriorityHigh,
+			wantPriority: PriorityHigh,
+		},
+		{
+			name:         "test empty priority",
+			priority:     "",
+			wantPriority: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := Task{
+				priority: tt.priority,
+			}
+
+			if task.Priority() != tt.wantPriority {
+				t.Fatalf("expected priority:%v, got: %v", tt.wantPriority, task.Priority())
+			}
+		})
+	}
+}
+func TestDescriptionUpdate(t *testing.T) {
+	tests := []struct {
+		name             string
+		description      string
+		inputDescription string
+		wantDescription  string
+		wantErr          error
+	}{
+		{
+			name:             "description normal",
+			description:      "test",
+			inputDescription: "newtest",
+			wantDescription:  "newtest",
+		}, {
+			name:             "description empty",
+			description:      "test",
+			inputDescription: "",
+			wantDescription:  "",
+		}, {
+			name:             "description to long",
+			description:      "test",
+			inputDescription: strings.Repeat("n", 501),
+			wantDescription:  "test",
+			wantErr:          ErrDescriptionTooLong,
+		}, {
+			name:             "description good",
+			description:      "test",
+			inputDescription: strings.Repeat("n", 500),
+			wantDescription:  strings.Repeat("n", 500),
+		}, {
+			name:             "russian description good",
+			description:      "",
+			inputDescription: strings.Repeat("я", 300),
+			wantDescription:  strings.Repeat("я", 300),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+			task := Task{
+				description: tt.description,
+				updatedAt:   oldTime,
+			}
+
+			err := task.UpdateDescription(tt.inputDescription)
+
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error: %v, got: %v", tt.wantErr, err)
+				}
+			}
+			if tt.wantErr == nil && err != nil {
+				t.Fatalf("unexpected error:%v", err)
+			}
+
+			if task.description != tt.wantDescription {
+				t.Errorf("expected description: %v, got: %v", tt.wantDescription, task.Description())
+			}
+			if tt.wantErr == nil {
+				if !task.updatedAt.After(oldTime) {
+					t.Errorf("expected new update time, got: %v", task.updatedAt)
+				}
+			} else {
+				if !task.updatedAt.Equal(oldTime) {
+					t.Errorf("expected created time, got:%v", task.updatedAt)
+				}
+			}
+
+		})
+	}
 }

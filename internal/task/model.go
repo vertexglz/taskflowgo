@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type TaskStatus string
@@ -14,6 +15,7 @@ var (
 	ErrInvalidStatusTransition = errors.New("invalid status transition")
 	ErrEmptyTaskTitle          = errors.New("title cannot be empty")
 	ErrInvalidTaskPriority     = errors.New("invalid task priority")
+	ErrDescriptionTooLong      = errors.New("descrpition too long max 500 symbols")
 )
 
 const (
@@ -71,6 +73,28 @@ func (t *Task) Cancel() error {
 		return nil
 	}
 	return fmt.Errorf("cannot cancel task from status %q : %w", t.status, ErrInvalidStatusTransition)
+}
+func (t Task) Title() string {
+	return t.title
+}
+
+func (t Task) Description() string {
+	return t.description
+}
+func (t Task) Priority() TaskPriority {
+	return t.priority
+}
+
+func (t *Task) UpdateDescription(description string) error {
+	if t.description == description {
+		return nil
+	}
+	if utf8.RuneCountInString(description) > 500 {
+		return ErrDescriptionTooLong
+	}
+	t.description = description
+	t.updatedAt = time.Now()
+	return nil
 }
 
 func NewTask(title, description string, priority TaskPriority) (*Task, error) {
