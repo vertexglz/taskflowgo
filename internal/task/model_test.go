@@ -166,12 +166,14 @@ func TestTaskCancel(t *testing.T) {
 
 func TestNewTask(t *testing.T) {
 	tests := []struct {
-		name         string
-		title        string
-		priority     TaskPriority
-		wantTitle    string
-		wantPriority TaskPriority
-		wantErr      error
+		name            string
+		description     string
+		title           string
+		priority        TaskPriority
+		wantTitle       string
+		wantDescription string
+		wantPriority    TaskPriority
+		wantErr         error
 	}{
 		{
 			name:         "Valid low",
@@ -224,11 +226,69 @@ func TestNewTask(t *testing.T) {
 			wantTitle:    "Learn Go",
 			wantPriority: PriorityLow,
 		},
+		{
+			name:         "title too long",
+			title:        strings.Repeat("n", 201),
+			priority:     PriorityLow,
+			wantPriority: PriorityLow,
+			wantErr:      ErrTitleTooLong,
+		}, {
+			name:         "description too long",
+			title:        "test",
+			description:  strings.Repeat("n", 501),
+			priority:     PriorityLow,
+			wantTitle:    "test",
+			wantPriority: PriorityLow,
+			wantErr:      ErrDescriptionTooLong,
+		},
+		{
+			name:         "title good",
+			title:        strings.Repeat("n", 200),
+			priority:     PriorityLow,
+			wantPriority: PriorityLow,
+			wantTitle:    strings.Repeat("n", 200),
+		}, {
+			name:            "description good",
+			title:           "test",
+			description:     strings.Repeat("n", 500),
+			priority:        PriorityLow,
+			wantTitle:       "test",
+			wantPriority:    PriorityLow,
+			wantDescription: strings.Repeat("n", 500),
+		}, {
+			name:         "russian title good",
+			title:        strings.Repeat("я", 200),
+			priority:     PriorityLow,
+			wantPriority: PriorityLow,
+			wantTitle:    strings.Repeat("я", 200),
+		}, {
+			name:         "russian title too long",
+			title:        strings.Repeat("я", 201),
+			priority:     PriorityLow,
+			wantPriority: PriorityLow,
+			wantErr:      ErrTitleTooLong,
+		}, {
+			name:            "russian description good",
+			title:           "test",
+			description:     strings.Repeat("я", 500),
+			priority:        PriorityLow,
+			wantTitle:       "test",
+			wantPriority:    PriorityLow,
+			wantDescription: strings.Repeat("я", 500),
+		}, {
+			name:         "russian description too long",
+			title:        "test",
+			description:  strings.Repeat("я", 501),
+			priority:     PriorityLow,
+			wantTitle:    "test",
+			wantPriority: PriorityLow,
+			wantErr:      ErrDescriptionTooLong,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task, err := NewTask(tt.title, "", tt.priority)
+			task, err := NewTask(tt.title, tt.description, tt.priority)
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -249,6 +309,9 @@ func TestNewTask(t *testing.T) {
 			if task.title != tt.wantTitle {
 				t.Errorf("expected title: %v, got: %v", tt.wantTitle, task.title)
 			}
+			if task.description != tt.wantDescription {
+				t.Errorf("expected description: %v, got:%v", tt.wantDescription, task.description)
+			}
 			if task.priority != tt.wantPriority {
 				t.Errorf("expected priority: %v, got: %v", tt.wantPriority, task.priority)
 			}
@@ -261,7 +324,7 @@ func TestNewTask(t *testing.T) {
 			if task.updatedAt.IsZero() {
 				t.Errorf("expected time, got nil")
 			}
-			if task.createdAt != task.updatedAt {
+			if !task.createdAt.Equal(task.updatedAt) {
 				t.Errorf("expected one time, got: %v , %v", task.createdAt, task.updatedAt)
 			}
 			if task.id != 0 {
@@ -521,5 +584,107 @@ func TestTitleUpdate(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestPriorityUpdate(t *testing.T) {
+	tests := []struct {
+		name             string
+		initialPriority  TaskPriority
+		inputPriority    TaskPriority
+		wantPriority     TaskPriority
+		wantErr          error
+		wantUpdateChange bool
+	}{
+		{
+			name:             "low to high",
+			initialPriority:  PriorityLow,
+			inputPriority:    PriorityHigh,
+			wantPriority:     PriorityHigh,
+			wantUpdateChange: true,
+		}, {
+			name:             "high to medium",
+			initialPriority:  PriorityHigh,
+			inputPriority:    PriorityMedium,
+			wantPriority:     PriorityMedium,
+			wantUpdateChange: true,
+		}, {
+			name:             "medium to low",
+			initialPriority:  PriorityMedium,
+			inputPriority:    PriorityLow,
+			wantPriority:     PriorityLow,
+			wantUpdateChange: true,
+		}, {
+			name:             "invalid priority",
+			initialPriority:  PriorityLow,
+			inputPriority:    "banana",
+			wantPriority:     PriorityLow,
+			wantErr:          ErrInvalidTaskPriority,
+			wantUpdateChange: false,
+		}, {
+			name:             "medium to medium",
+			initialPriority:  PriorityMedium,
+			inputPriority:    PriorityMedium,
+			wantPriority:     PriorityMedium,
+			wantUpdateChange: false,
+		}, {
+			name:             "empty priority",
+			initialPriority:  PriorityLow,
+			inputPriority:    "",
+			wantPriority:     PriorityLow,
+			wantErr:          ErrInvalidTaskPriority,
+			wantUpdateChange: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+			task := Task{
+				priority:  tt.initialPriority,
+				updatedAt: oldTime,
+			}
+
+			err := task.UpdatePriority(tt.inputPriority)
+
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error: %v, got: %v", tt.wantErr, err)
+				}
+			}
+			if tt.wantErr == nil && err != nil {
+				t.Fatalf("unexpected error:%v", err)
+			}
+
+			if task.priority != tt.wantPriority {
+				t.Errorf("expected priority: %v, got: %v", tt.wantPriority, task.priority)
+			}
+			if tt.wantUpdateChange {
+				if !task.updatedAt.After(oldTime) {
+					t.Errorf("expected new update time, got:%v", task.updatedAt)
+				}
+			} else {
+				if !task.updatedAt.Equal(oldTime) {
+					t.Errorf("expected old time, got:%v", task.updatedAt)
+				}
+			}
+
+		})
+	}
+}
+
+func TestPriorityUpdateZeroValue(t *testing.T) {
+	task := Task{}
+
+	err := task.UpdatePriority("")
+
+	if !errors.Is(err, ErrInvalidTaskPriority) {
+		t.Fatalf("expected error:%v, got:%v", ErrInvalidTaskPriority, err)
+	}
+	if task.priority != "" {
+		t.Errorf("expected empty priority, got:%v", task.priority)
+	}
+	if !task.updatedAt.IsZero() {
+		t.Errorf("expected zero updateAt, got:%v", task.updatedAt)
 	}
 }

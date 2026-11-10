@@ -31,7 +31,10 @@ const (
 	PriorityHigh   TaskPriority = "high"
 )
 
-const maxTitleLength = 200
+const (
+	maxTitleLength       = 200
+	maxDescriptionLength = 500
+)
 
 type Task struct {
 	id          int64
@@ -62,6 +65,16 @@ func (t *Task) Start() error {
 
 }
 
+func isValidPriority(priority TaskPriority) bool {
+	switch priority {
+	case PriorityLow, PriorityMedium, PriorityHigh:
+		return true
+	default:
+		return false
+	}
+
+}
+
 func (t *Task) Complete() error {
 	if t.status == StatusInProgress {
 		t.status = StatusDone
@@ -87,28 +100,21 @@ func (t Task) Description() string {
 func (t Task) Priority() TaskPriority {
 	return t.priority
 }
-
-func (t *Task) UpdateDescription(description string) error {
-	if t.description == description {
-		return nil
-	}
-	if utf8.RuneCountInString(description) > 500 {
-		return ErrDescriptionTooLong
-	}
-	t.description = description
-	t.updatedAt = time.Now()
-	return nil
-}
-
 func NewTask(title, description string, priority TaskPriority) (*Task, error) {
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return nil, ErrEmptyTaskTitle
 	}
+	if utf8.RuneCountInString(title) > maxTitleLength {
+		return nil, ErrTitleTooLong
+	}
 	if priority == "" {
 		priority = PriorityMedium
-	} else if priority != PriorityLow && priority != PriorityMedium && priority != PriorityHigh {
+	} else if !isValidPriority(priority) {
 		return nil, ErrInvalidTaskPriority
+	}
+	if utf8.RuneCountInString(description) > maxDescriptionLength {
+		return nil, ErrDescriptionTooLong
 	}
 	now := time.Now()
 	task := &Task{
@@ -119,6 +125,18 @@ func NewTask(title, description string, priority TaskPriority) (*Task, error) {
 		createdAt:   now,
 		updatedAt:   now}
 	return task, nil
+}
+
+func (t *Task) UpdateDescription(description string) error {
+	if utf8.RuneCountInString(description) > maxDescriptionLength {
+		return ErrDescriptionTooLong
+	}
+	if t.description == description {
+		return nil
+	}
+	t.description = description
+	t.updatedAt = time.Now()
+	return nil
 }
 
 func (t *Task) UpdateTitle(title string) error {
@@ -136,4 +154,16 @@ func (t *Task) UpdateTitle(title string) error {
 	t.updatedAt = time.Now()
 	return nil
 
+}
+
+func (t *Task) UpdatePriority(priority TaskPriority) error {
+	if !isValidPriority(priority) {
+		return ErrInvalidTaskPriority
+	}
+	if t.priority == priority {
+		return nil
+	}
+	t.priority = priority
+	t.updatedAt = time.Now()
+	return nil
 }
