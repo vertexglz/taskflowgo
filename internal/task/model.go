@@ -16,6 +16,7 @@ var (
 	ErrEmptyTaskTitle          = errors.New("title cannot be empty")
 	ErrInvalidTaskPriority     = errors.New("invalid task priority")
 	ErrDescriptionTooLong      = errors.New("descrpition too long max 500 symbols")
+	ErrTitleTooLong            = errors.New("tittle too long max 200 symbols")
 )
 
 const (
@@ -29,6 +30,8 @@ const (
 	PriorityMedium TaskPriority = "medium"
 	PriorityHigh   TaskPriority = "high"
 )
+
+const maxTitleLength = 200
 
 type Task struct {
 	id          int64
@@ -116,4 +119,21 @@ func NewTask(title, description string, priority TaskPriority) (*Task, error) {
 		createdAt:   now,
 		updatedAt:   now}
 	return task, nil
+}
+
+func (t *Task) UpdateTitle(title string) error {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return ErrEmptyTaskTitle
+	}
+	if utf8.RuneCountInString(title) > maxTitleLength {
+		return ErrTitleTooLong
+	}
+	if t.title == title {
+		return nil
+	}
+	t.title = title
+	t.updatedAt = time.Now()
+	return nil
+
 }

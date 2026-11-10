@@ -413,3 +413,113 @@ func TestDescriptionUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestTitleUpdate(t *testing.T) {
+	tests := []struct {
+		name             string
+		title            string
+		inputTitle       string
+		wantTitle        string
+		wantErr          error
+		wantUpdateChange bool
+	}{
+		{
+			name:             "title normal",
+			title:            "test",
+			inputTitle:       "newtest",
+			wantTitle:        "newtest",
+			wantUpdateChange: true,
+		}, {
+			name:             "title empty",
+			title:            "test",
+			inputTitle:       "",
+			wantTitle:        "test",
+			wantErr:          ErrEmptyTaskTitle,
+			wantUpdateChange: false,
+		}, {
+			name:             "title to long",
+			title:            "test",
+			inputTitle:       strings.Repeat("n", 201),
+			wantTitle:        "test",
+			wantErr:          ErrTitleTooLong,
+			wantUpdateChange: false,
+		}, {
+			name:             "title good",
+			title:            "test",
+			inputTitle:       strings.Repeat("n", 200),
+			wantTitle:        strings.Repeat("n", 200),
+			wantUpdateChange: true,
+		}, {
+			name:             "russian title good",
+			title:            "тест",
+			inputTitle:       strings.Repeat("я", 200),
+			wantTitle:        strings.Repeat("я", 200),
+			wantUpdateChange: true,
+		},
+		{
+			name:             "check the update time",
+			title:            "test",
+			inputTitle:       "test",
+			wantTitle:        "test",
+			wantUpdateChange: false,
+		},
+		{
+			name:             "check the trimspace",
+			title:            "test",
+			inputTitle:       "   123test   ",
+			wantTitle:        "123test",
+			wantUpdateChange: true,
+		},
+		{
+			name:             "check the trimspace empty",
+			title:            "test",
+			inputTitle:       "        ",
+			wantTitle:        "test",
+			wantErr:          ErrEmptyTaskTitle,
+			wantUpdateChange: false,
+		},
+		{
+			name:             "russian title too long",
+			title:            "тест",
+			inputTitle:       strings.Repeat("я", 201),
+			wantTitle:        "тест",
+			wantErr:          ErrTitleTooLong,
+			wantUpdateChange: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+			task := Task{
+				title:     tt.title,
+				updatedAt: oldTime,
+			}
+
+			err := task.UpdateTitle(tt.inputTitle)
+
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error: %v, got: %v", tt.wantErr, err)
+				}
+			}
+			if tt.wantErr == nil && err != nil {
+				t.Fatalf("unexpected error:%v", err)
+			}
+
+			if task.title != tt.wantTitle {
+				t.Errorf("expected title: %v, got: %v", tt.wantTitle, task.title)
+			}
+			if tt.wantUpdateChange {
+				if !task.updatedAt.After(oldTime) {
+					t.Errorf("expected new update time, got:%v", task.updatedAt)
+				}
+			} else {
+				if !task.updatedAt.Equal(oldTime) {
+					t.Errorf("expected old time, got:%v", task.updatedAt)
+				}
+			}
+
+		})
+	}
+}
