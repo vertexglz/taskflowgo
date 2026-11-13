@@ -10,14 +10,17 @@ import (
 
 type TaskStatus string
 type TaskPriority string
+type TaskID string
 
 var (
 	ErrInvalidStatusTransition = errors.New("invalid status transition")
 	ErrEmptyTaskTitle          = errors.New("title cannot be empty")
 	ErrInvalidTaskPriority     = errors.New("invalid task priority")
-	ErrDescriptionTooLong      = errors.New("descrpition too long max 500 symbols")
-	ErrTitleTooLong            = errors.New("tittle too long max 200 symbols")
+	ErrDescriptionTooLong      = errors.New("description too long: maximum 500 runes")
+	ErrTitleTooLong            = errors.New("title too long: maximum 200 runes")
+	ErrEmptyTaskID             = errors.New("task ID cannot be empty")
 )
+var _ Task = (*task)(nil)
 
 const (
 	StatusTodo       TaskStatus = "todo"
@@ -36,8 +39,8 @@ const (
 	maxDescriptionLength = 500
 )
 
-type Task struct {
-	id          int64
+type task struct {
+	id          TaskID
 	title       string
 	description string
 	status      TaskStatus
@@ -46,22 +49,54 @@ type Task struct {
 	updatedAt   time.Time
 }
 
-type CreateTaskRequest struct {
-	Title       string       `json:"title"`
-	Description string       `json:"description,omitempty"`
-	Priority    TaskPriority `json:"priority"`
+type Task interface {
+	ID() TaskID
+	Title() string
+	Description() string
+	Status() TaskStatus
+	Priority() TaskPriority
+
+	CreatedAt() time.Time
+	UpdatedAt() time.Time
+
+	UpdateTitle(string) error
+	UpdateDescription(string) error
+	UpdatePriority(TaskPriority) error
+
+	Start() error
+	Complete() error
+	Cancel() error
+	isTask()
 }
 
-func (t Task) Status() TaskStatus {
+func (t task) Status() TaskStatus {
 	return t.status
 }
 
-func (t *Task) Start() error {
+func (t task) ID() TaskID {
+	return t.id
+}
+
+func (t task) CreatedAt() time.Time {
+	return t.createdAt
+}
+
+func (t task) UpdatedAt() time.Time {
+	return t.updatedAt
+
+}
+
+func (t *task) Start() error {
 	if t.Status() == StatusTodo {
 		t.status = StatusInProgress
+		t.updatedAt = time.Now()
 		return nil
 	}
 	return fmt.Errorf("cannot start task from status %q : %w", t.status, ErrInvalidStatusTransition)
+
+}
+
+func (*task) isTask() {
 
 }
 
@@ -75,32 +110,38 @@ func isValidPriority(priority TaskPriority) bool {
 
 }
 
-func (t *Task) Complete() error {
+func (t *task) Complete() error {
 	if t.status == StatusInProgress {
 		t.status = StatusDone
+		t.updatedAt = time.Now()
 		return nil
 	}
 	return fmt.Errorf("cannot complete task from status %q : %w", t.status, ErrInvalidStatusTransition)
 }
 
-func (t *Task) Cancel() error {
+func (t *task) Cancel() error {
 	if t.status == StatusTodo || t.status == StatusInProgress {
 		t.status = StatusCancelled
+		t.updatedAt = time.Now()
 		return nil
+
 	}
 	return fmt.Errorf("cannot cancel task from status %q : %w", t.status, ErrInvalidStatusTransition)
 }
-func (t Task) Title() string {
+func (t task) Title() string {
 	return t.title
 }
 
-func (t Task) Description() string {
+func (t task) Description() string {
 	return t.description
 }
-func (t Task) Priority() TaskPriority {
+func (t task) Priority() TaskPriority {
 	return t.priority
 }
-func NewTask(title, description string, priority TaskPriority) (*Task, error) {
+func NewTask(id TaskID, title string, description string, priority TaskPriority) (Task, error) {
+	if strings.TrimSpace(string(id)) == "" {
+		return nil, ErrEmptyTaskID
+	}
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return nil, ErrEmptyTaskTitle
@@ -117,7 +158,8 @@ func NewTask(title, description string, priority TaskPriority) (*Task, error) {
 		return nil, ErrDescriptionTooLong
 	}
 	now := time.Now()
-	task := &Task{
+	task := &task{
+		id:          id,
 		title:       title,
 		description: description,
 		status:      StatusTodo,
@@ -127,7 +169,7 @@ func NewTask(title, description string, priority TaskPriority) (*Task, error) {
 	return task, nil
 }
 
-func (t *Task) UpdateDescription(description string) error {
+func (t *task) UpdateDescription(description string) error {
 	if utf8.RuneCountInString(description) > maxDescriptionLength {
 		return ErrDescriptionTooLong
 	}
@@ -139,7 +181,7 @@ func (t *Task) UpdateDescription(description string) error {
 	return nil
 }
 
-func (t *Task) UpdateTitle(title string) error {
+func (t *task) UpdateTitle(title string) error {
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return ErrEmptyTaskTitle
@@ -156,7 +198,7 @@ func (t *Task) UpdateTitle(title string) error {
 
 }
 
-func (t *Task) UpdatePriority(priority TaskPriority) error {
+func (t *task) UpdatePriority(priority TaskPriority) error {
 	if !isValidPriority(priority) {
 		return ErrInvalidTaskPriority
 	}

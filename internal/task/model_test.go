@@ -39,7 +39,7 @@ func TestTaskStart(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := Task{
+			task := task{
 				status: tt.initialStatus,
 			}
 			err := task.Start()
@@ -92,7 +92,7 @@ func TestTaskComplete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := Task{
+			task := task{
 				status: tt.initialStatus,
 			}
 
@@ -142,7 +142,7 @@ func TestTaskCancel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := Task{
+			task := task{
 				status: tt.initialStatus,
 			}
 
@@ -355,7 +355,7 @@ func TestTaskDescription(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := Task{
+			task := task{
 				description: tt.description,
 			}
 
@@ -394,7 +394,7 @@ func TestTaskPriority(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := Task{
+			task := task{
 				priority: tt.priority,
 			}
 
@@ -444,7 +444,7 @@ func TestDescriptionUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			oldTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-			task := Task{
+			task := task{
 				description: tt.description,
 				updatedAt:   oldTime,
 			}
@@ -554,7 +554,7 @@ func TestTitleUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			oldTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-			task := Task{
+			task := task{
 				title:     tt.title,
 				updatedAt: oldTime,
 			}
@@ -640,7 +640,7 @@ func TestPriorityUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			oldTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-			task := Task{
+			task := task{
 				priority:  tt.initialPriority,
 				updatedAt: oldTime,
 			}
@@ -674,7 +674,7 @@ func TestPriorityUpdate(t *testing.T) {
 }
 
 func TestPriorityUpdateZeroValue(t *testing.T) {
-	task := Task{}
+	task := task{}
 
 	err := task.UpdatePriority("")
 
