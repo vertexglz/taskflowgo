@@ -46,7 +46,7 @@ func TestTaskStart(t *testing.T) {
 			if tt.wantErr {
 
 				if !errors.Is(err, ErrInvalidStatusTransition) {
-					t.Fatalf("expected ErrInvalidStatusTransition, got: %v", err)
+					t.Fatalf("expected ErrInvallidStatusTransition, got: %v", err)
 				}
 			} else if err != nil {
 				t.Fatalf("unexpected error: %v", err)
