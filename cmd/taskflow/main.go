@@ -8,6 +8,7 @@ import (
 
 func main() {
 	newTask, err := task.NewTask(
+		"task-1",
 		"Learn Go",
 		"Continue developing TaskFlow",
 		task.PriorityHigh,
