@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"taskflow/internal/task"
 
@@ -60,7 +61,7 @@ func (r *Repository) initSchema(ctx context.Context) error {
 	status TEXT NOT NULL,
 	priority TEXT NOT NULL,
 	created_at TEXT NOT NULL,
-	update_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
 	version INTEGER NOT NULL DEFAULT 1);`
 
 	_, err := r.db.ExecContext(ctx, query)
@@ -71,5 +72,33 @@ func (r *Repository) initSchema(ctx context.Context) error {
 }
 
 func (r *Repository) Save(ctx context.Context, t task.Task) error {
+	if t == nil {
+		return errors.New("task cannot be nil")
+	}
+	query := `
+	INSERT INTO tasks(
+	id,
+	title,
+	description,
+	status,
+	priority,
+	created_at,
+	updated_at)
+	VALUES (?,?,?,?,?,?,?);`
 
+	_, err := r.db.ExecContext(
+		ctx,
+		query,
+		string(t.ID()),
+		t.Title(),
+		t.Description(),
+		string(t.Status()),
+		string(t.Priority()),
+		t.CreatedAt().Format(time.RFC3339Nano),
+		t.UpdatedAt().Format(time.RFC3339Nano),
+	)
+	if err != nil {
+		return fmt.Errorf("save task %q: %w", t.ID(), err)
+	}
+	return nil
 }
